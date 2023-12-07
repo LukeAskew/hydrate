@@ -11,13 +11,14 @@ module.exports = function getRootDeps ({ inv }) {
   let deps = Object.assign(package.devDependencies || {}, package.dependencies || {})
 
   let lock = existsSync(packageLock) && JSON.parse(readFileSync(packageLock))
+  let lockDepsRaw = lock.dependencies ?? lock.packages
+
   // Top level lockfile deps only; we aren't going to walk the tree
-  // Per npm: lockfileVersion 2 is backwards compatible with v1; however v3 will be a fully breaking change
-  if (lock && [ 1, 2 ].includes(lock.lockfileVersion) && lock.dependencies) {
+  if (lock && lockDepsRaw) {
     let lockDeps = {}
-    Object.entries(lock.dependencies).forEach(([ dep, data ]) => {
+    Object.entries(lockDepsRaw).forEach(([ dep, data ]) => {
       if (!dep || !data.version || data.dev) return
-      lockDeps[dep] = data.version
+      lockDeps[dep.replace(/^node_modules\//, '')] = data.version
     })
     // Locked deps win
     deps = Object.assign(deps, lockDeps)

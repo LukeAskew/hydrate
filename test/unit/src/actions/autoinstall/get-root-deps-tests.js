@@ -9,6 +9,10 @@ function pkgify (deps, devDeps, lock) {
   if (deps) tmpl.dependencies = deps
   if (devDeps) tmpl.devDependencies = devDeps
   if (lock) tmpl.lockfileVersion = lock
+  if (lock === 3) {
+    delete tmpl.dependencies
+    tmpl.packages = deps
+  }
   return JSON.stringify(tmpl, null, 2)
 }
 let inventory = { inv: { _project: { cwd: process.cwd() } } }
@@ -54,7 +58,7 @@ test('package.json', t => {
 })
 
 test('package.json + package-lock.json', t => {
-  t.plan(4)
+  t.plan(6)
   let deps
   let lockDeps
   let correct
@@ -90,6 +94,15 @@ test('package.json + package-lock.json', t => {
   console.log(result)
   mockFs.restore()
 
+  // v3
+  result = run({
+    'package.json': pkgify(deps),
+    'package-lock.json': pkgify(lockDeps, null, 3),
+  })
+  t.deepEqual(result, correct, 'Got back specific dep versions from lockfile (lockfileVersion 3)')
+  console.log(result)
+  mockFs.restore()
+
   // v1
   deps = {
     foo: '^1.0.0',
@@ -119,6 +132,14 @@ test('package.json + package-lock.json', t => {
   })
   t.deepEqual(result, correct, 'Merged dep versions from package + lockfile (lockfileVersion 2)')
   console.log(result)
+  mockFs.restore()
 
+  // v3
+  result = run({
+    'package.json': pkgify(deps),
+    'package-lock.json': pkgify(lockDeps, null, 3),
+  })
+  t.deepEqual(result, correct, 'Merged dep versions from package + lockfile (lockfileVersion 3)')
+  console.log(result)
   mockFs.restore()
 })
